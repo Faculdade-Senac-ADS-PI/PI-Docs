@@ -1,0 +1,109 @@
+' Diagramas C4 do ChamaServ. Gerar SVG com:
+'   java -jar plantuml.jar -tsvg -charset UTF-8 -o ../../static/img/c4 diagramas/c4/c4.puml
+
+@startuml c1-contexto
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title [C1] Contexto do sistema — ChamaServ
+
+Person(contratante, "Contratante", "Pessoa que procura e contrata serviços em Fortaleza-CE")
+Person(prestador, "Prestador", "Profissional autônomo ou empresa que divulga serviços")
+Person(admin, "Administrador", "Equipe que modera usuários, serviços e categorias")
+
+System(chamaserv, "ChamaServ", "Plataforma web que conecta contratantes a prestadores: busca, publicação de serviços e (previsto) contratação e avaliação")
+
+System_Ext(email, "Serviço de e-mail", "Envio de notificações e recuperação de senha (previsto)")
+System_Ext(mapas, "API de mapas", "Geolocalização para busca por proximidade (previsto)")
+
+Rel(contratante, chamaserv, "Busca serviços, vê perfis e solicita atendimento", "HTTPS")
+Rel(prestador, chamaserv, "Publica e gerencia serviços e responde solicitações", "HTTPS")
+Rel(admin, chamaserv, "Modera e mantém categorias", "HTTPS")
+Rel(chamaserv, email, "Envia notificações", "SMTP")
+Rel(chamaserv, mapas, "Consulta coordenadas", "HTTPS/JSON")
+@enduml
+
+@startuml c2-conteineres
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title [C2] Contêineres — ChamaServ
+
+Person(usuario, "Usuário", "Contratante ou prestador")
+Person(admin, "Administrador", "Equipe de moderação")
+
+System_Boundary(cs, "ChamaServ") {
+  Container(spa, "Aplicação web (PI-Frontend)", "React 19, Vite, Tailwind CSS, shadcn/ui", "SPA responsiva servida como arquivos estáticos; mantém a sessão (JWT) no navegador")
+  Container(api, "API REST (PI-Backend)", "Python 3.14, Django 6.1, Django REST Framework 3.18, SimpleJWT", "Regras de negócio, autenticação JWT, filtros e documentação OpenAPI em /api/v1")
+  Container(adminui, "Django Admin", "Django 6.1", "Painel administrativo para usuários, serviços e categorias")
+  ContainerDb(db, "Banco de dados", "SQLite (dev) / PostgreSQL (produção)", "Usuários, categorias e serviços")
+  Container(midia, "Armazenamento de mídia", "Sistema de arquivos (MEDIA_ROOT)", "Fotos de perfil em perfis/")
+}
+
+Rel(usuario, spa, "Usa", "HTTPS")
+Rel(spa, api, "Chama", "HTTPS/JSON + Bearer JWT")
+Rel(admin, adminui, "Administra", "HTTPS")
+Rel(adminui, db, "Lê e grava", "Django ORM")
+Rel(api, db, "Lê e grava", "Django ORM / SQL")
+Rel(api, midia, "Salva e lê imagens")
+@enduml
+
+@startuml c3-componentes-backend
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title [C3] Componentes da API REST (PI-Backend)
+
+Container(spa, "Aplicação web (PI-Frontend)", "React", "Consome a API")
+ContainerDb(db, "Banco de dados", "SQLite / PostgreSQL")
+
+Container_Boundary(api, "API REST (Django + DRF)") {
+  Component(urls, "Roteador (config/urls.py)", "Django URLconf", "Expõe /api/v1/auth, /api/v1/servicos, /api/v1/categorias e /api/docs")
+  Component(auth, "app usuarios — autenticação", "SimpleJWT: LoginView, RefreshView, VerifyView", "Emite e renova tokens access/refresh")
+  Component(perfil, "app usuarios — cadastro e perfil", "RegistroView, PerfilView, AlterarSenhaView", "Cadastro, perfil e troca de senha")
+  Component(servicos, "app servicos — ServicoViewSet", "DRF ModelViewSet + django-filter", "CRUD de serviços com busca, filtros, ordenação e meus=true")
+  Component(categorias, "app servicos — CategoriaViewSet", "DRF ReadOnlyModelViewSet", "Listagem pública de categorias")
+  Component(core, "app core", "Permissões, paginação, exceções", "EhDonoOuLeitura, PadraoPaginacao e erros padronizados")
+  Component(modelos, "Modelos (ORM)", "Usuario, Categoria, Servico", "Entidades e validações de domínio")
+  Component(docs, "drf-spectacular", "OpenAPI 3.0", "Swagger UI e ReDoc")
+}
+
+Rel(spa, urls, "Requisições", "HTTPS/JSON")
+Rel(urls, auth, "/auth/login, /token/*")
+Rel(urls, perfil, "/auth/register, /profile, /change-password")
+Rel(urls, servicos, "/servicos/")
+Rel(urls, categorias, "/categorias/")
+Rel(urls, docs, "/api/docs, /api/schema")
+Rel(servicos, core, "Verifica permissão e pagina")
+Rel(servicos, modelos, "Consulta e grava")
+Rel(categorias, modelos, "Consulta")
+Rel(perfil, modelos, "Consulta e grava")
+Rel(auth, modelos, "Valida credenciais")
+Rel(modelos, db, "SQL")
+@enduml
+
+@startuml c3-componentes-frontend
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title [C3] Componentes da aplicação web (PI-Frontend)
+
+Person(usuario, "Usuário")
+Container(api, "API REST (PI-Backend)", "Django + DRF")
+
+Container_Boundary(spa, "Aplicação web (React 19 + Vite)") {
+  Component(router, "App.jsx (React Router 7)", "Rotas", "/, /login, /cadastro, /buscar, /profissional/:id, /perfil, /dashboard")
+  Component(paginas, "Páginas", "Home, Login, Register, SearchWorkers, WorkerDetail, Profile, Dashboard", "Telas da SPA")
+  Component(componentes, "Componentes", "Navbar, Footer, WorkerCard, CategoryCard, ui/* (shadcn/Radix)", "Blocos visuais reutilizáveis")
+  Component(auth, "AuthContext + ProtectedRoute", "React Context", "Sessão do usuário e proteção de rotas")
+  Component(cliente, "api/client.js", "Axios + interceptor Bearer", "Chamadas HTTP com o token JWT")
+  Component(query, "hooks/useWorkers.js", "TanStack React Query", "Cache de requisições (pronto, ainda não usado)")
+  Component(mock, "mockData.js", "Dados simulados", "Fonte temporária de Home, Busca e Detalhe")
+}
+
+Rel(usuario, router, "Navega", "HTTPS")
+Rel(router, paginas, "Renderiza")
+Rel(paginas, componentes, "Usa")
+Rel(paginas, auth, "Lê a sessão")
+Rel(paginas, mock, "Lê dados simulados (temporário)")
+Rel(paginas, query, "Busca dados (previsto)")
+Rel(query, cliente, "Usa")
+Rel(auth, cliente, "Login e cadastro")
+Rel(cliente, api, "HTTPS/JSON", "rotas a alinhar com /api/v1")
+@enduml
