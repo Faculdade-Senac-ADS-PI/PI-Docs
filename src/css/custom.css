@@ -1,0 +1,43 @@
+/* Paleta do ChamaServ (laranja da marca sobre azul-marinho) */
+:root {
+  --ifm-color-primary: #c96a04;
+  --ifm-color-primary-dark: #b55f04;
+  --ifm-color-primary-darker: #ab5a03;
+  --ifm-color-primary-darkest: #8d4a03;
+  --ifm-color-primary-light: #dd7504;
+  --ifm-color-primary-lighter: #e87b05;
+  --ifm-color-primary-lightest: #f88f1e;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #f0a202;
+  --ifm-color-primary-dark: #d89202;
+  --ifm-color-primary-darker: #cc8a02;
+  --ifm-color-primary-darkest: #a87101;
+  --ifm-color-primary-light: #fdad0e;
+  --ifm-color-primary-lighter: #fdb21c;
+  --ifm-color-primary-lightest: #fdc046;
+  --ifm-background-color: #121933;
+  --ifm-navbar-background-color: #0e1430;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Diagramas e prints: fundo branco e borda leve para legibilidade nos dois temas */
+.markdown img {
+  display: block;
+  margin: 0.5rem auto;
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  background: #fff;
+}
+
+.legenda {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 1.5rem;
+}
+
+.markdown table { font-size: 0.88rem; }
